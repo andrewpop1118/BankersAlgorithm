@@ -17,6 +17,7 @@ public class Banker {
 	}
 	
 	public void setClaim(int nUnits) {
+		
 		Thread claimingThread = Thread.currentThread();
 		
 		//Prevent race conditions for threads attempting to make requests
