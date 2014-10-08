@@ -6,7 +6,7 @@ public class Banker {
 		this.nUnits = nUnits;
 	}
 	
-	public void setClaim() {
+	public void setClaim(int nUnits) {
 		
 	}
 	
