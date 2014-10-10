@@ -33,7 +33,8 @@ public class Client extends Thread{
 			}
 			
 			else{
-				int temp = rand.nextInt(banker.remaining());
+				int temp = rand.nextInt(banker.remaining()) + 1;//+1 Prevents request for 0 units
+				
 				banker.request(temp);
 			}
 			
@@ -44,7 +45,6 @@ public class Client extends Thread{
 			}
 			catch(InterruptedException e){}
 		}
-		
 		banker.release(banker.allocated());
 		
 		return;

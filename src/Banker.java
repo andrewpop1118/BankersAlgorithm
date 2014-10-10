@@ -27,7 +27,7 @@ public class Banker {
 			
 			if(o1[1] == o2[1]) {
 				return 0;
-			} else if (o1[1] > o1[2]) {
+			} else if (o1[1] > o2[1]) {
 				return 1;
 			} else {
 				return -1;
@@ -40,6 +40,7 @@ public class Banker {
 	public Banker(int nUnits) {
 		this.nUnitsOnHand = nUnits;
 		this.nUnitsTotal = nUnits;
+		this.allocation = new HashMap<Thread, int[]>();
 	}
 	
 	public void setClaim(int nUnits) {
@@ -63,12 +64,13 @@ public class Banker {
 		}
 	}
 	
-	public boolean request(int nUnits) {
+	public synchronized boolean request(int nUnits) {
 		Thread requestingThread = Thread.currentThread();
 		
 		if(allocation.get(requestingThread) == null ||
            nUnits < 0 ||
            nUnits > allocation.get(requestingThread)[1]) {
+			System.err.println("Exiting!!!");
 			System.exit(1);
 		}
 		
@@ -76,29 +78,28 @@ public class Banker {
 		
 		boolean safe = isSafeState();
 		
-		if(safe){
-			System.out.println("Thread "+ requestingThread.getName() +" has "+ nUnits +" units allocated.");
+		if(safe && nUnits <= this.nUnitsOnHand){
 			allocation.get(requestingThread)[0] += nUnits;
 			allocation.get(requestingThread)[1] -= nUnits;
 			this.nUnitsOnHand -= nUnits;
+			System.out.println("Thread "+ requestingThread.getName() +" has "+ allocation.get(requestingThread)[0] +" units allocated.");
 		} else {
-			//Additional lock over isSafeState
-			synchronized(this){
-				while(!isSafeState()){
-					try {
-						System.out.println("Thread "+ requestingThread.getName() +"waits.");
-						requestingThread.wait();
-						System.out.println("Thread"+ requestingThread.getName() +"awakened.");
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
+			while(!(isSafeState()) || nUnits > this.nUnitsOnHand){
+				try {
+					System.out.println("Thread "+ requestingThread.getName() +" waits.");
+					this.wait();
+					System.out.println("Thread "+ requestingThread.getName() +" awakened.");
+				} catch (InterruptedException e) {
+					e.printStackTrace();
 				}
+				
 			}
 			//The Allocation results in a safe state here
-			System.out.println("Thread "+ requestingThread.getName() +" has "+ nUnits +" units allocated.");
+			
 			allocation.get(requestingThread)[0] += nUnits;
 			allocation.get(requestingThread)[1] -= nUnits;
 			this.nUnitsOnHand -= nUnits;
+			System.out.println("Thread "+ requestingThread.getName() +" has "+ allocation.get(requestingThread)[0] +" units allocated.");
 			
 		}
 		return true;
@@ -109,13 +110,17 @@ public class Banker {
 		
 		if(allocation.get(requestingThread) == null ||
            nUnits < 0 ||
-           nUnits > allocation.get(requestingThread)[1]) {
+           nUnits > allocation.get(requestingThread)[0]) {
+			System.err.println("exiting!!!");
 			System.exit(1);
 		}
-		
-		allocation.get(requestingThread)[0] -= nUnits;
-		allocation.get(requestingThread)[1] += nUnits;
-		this.notifyAll();
+		synchronized(this){
+			System.out.println("Thread "+ requestingThread.getName() +" releases "+ nUnits +" units.");
+			allocation.get(requestingThread)[0] -= nUnits;
+			allocation.get(requestingThread)[1] += nUnits;
+			this.nUnitsOnHand+=nUnits;
+			this.notifyAll();
+		}
 		
 	}
 	
@@ -131,21 +136,26 @@ public class Banker {
 		//We're reading the allocation map here so we want to lock
 		//the banker so that no race conditions occur
 		synchronized(this){
+//			System.out.println("-------------------------------");
 			int nUnitsOnHand = this.nUnitsOnHand;
+//			System.out.println("Bank: " + nUnitsOnHand);
 			
-			ArrayList<int[]> allocationPairs = new ArrayList<int[]>();
-			
-			allocationPairs = (ArrayList<int[]>) allocation.values();
+			ArrayList<int[]> allocationPairs = new ArrayList<int[]>(allocation.values());
 		
 			Collections.sort(allocationPairs, new AllocCompare());
 			
 			for(int i = 0; i < allocationPairs.size(); i++) {
+//				System.out.println("Step:" + i);
+//				System.out.println("Bank: " + nUnitsOnHand);
+//				System.out.println("Remain: " + allocationPairs.get(i)[1]);
+//				System.out.println("Alloc: " + allocationPairs.get(i)[0]);
 				if(allocationPairs.get(i)[1] > nUnitsOnHand) {
 					return false;
 				}
 				nUnitsOnHand += allocationPairs.get(i)[0];
 			}
 		}
+//		System.out.println("-------------------------------");
 		return true;
 	}
 }
