@@ -33,7 +33,8 @@ public class Client extends Thread{
 			}
 			
 			else{
-				banker.request(banker.remaining());
+				int temp = rand.nextInt(banker.remaining());
+				banker.request(temp);
 			}
 			
 			int t = rand.nextInt((int)((maxSleepMillis/1000 - minSleepMillis/1000) + 1)) + (int)(minSleepMillis/1000);
