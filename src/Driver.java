@@ -23,7 +23,6 @@ public class Driver {
 		for(int i = 1; i <= numClients; i++){
 			clients.add(new Client(("Client " + i), banker, clientNUnits,
 					clientNRequests, minSleepMillis, maxSleepMillis));
-			System.err.println("Added a client");
 		}
 		
 		for(Client client: clients){

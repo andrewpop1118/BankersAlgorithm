@@ -70,7 +70,6 @@ public class Banker {
 		if(allocation.get(requestingThread) == null ||
            nUnits < 0 ||
            nUnits > allocation.get(requestingThread)[1]) {
-			System.err.println("Exiting!!!");
 			System.exit(1);
 		}
 		
@@ -111,7 +110,6 @@ public class Banker {
 		if(allocation.get(requestingThread) == null ||
            nUnits < 0 ||
            nUnits > allocation.get(requestingThread)[0]) {
-			System.err.println("exiting!!!");
 			System.exit(1);
 		}
 		synchronized(this){
@@ -136,26 +134,19 @@ public class Banker {
 		//We're reading the allocation map here so we want to lock
 		//the banker so that no race conditions occur
 		synchronized(this){
-//			System.out.println("-------------------------------");
 			int nUnitsOnHand = this.nUnitsOnHand;
-//			System.out.println("Bank: " + nUnitsOnHand);
 			
 			ArrayList<int[]> allocationPairs = new ArrayList<int[]>(allocation.values());
 		
 			Collections.sort(allocationPairs, new AllocCompare());
 			
 			for(int i = 0; i < allocationPairs.size(); i++) {
-//				System.out.println("Step:" + i);
-//				System.out.println("Bank: " + nUnitsOnHand);
-//				System.out.println("Remain: " + allocationPairs.get(i)[1]);
-//				System.out.println("Alloc: " + allocationPairs.get(i)[0]);
 				if(allocationPairs.get(i)[1] > nUnitsOnHand) {
 					return false;
 				}
 				nUnitsOnHand += allocationPairs.get(i)[0];
 			}
 		}
-//		System.out.println("-------------------------------");
 		return true;
 	}
 }
