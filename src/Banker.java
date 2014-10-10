@@ -77,13 +77,13 @@ public class Banker {
 		
 		boolean safe = isSafeState();
 		
-		if(safe && nUnits <= this.nUnitsOnHand){
+		if(safe && nUnits < this.nUnitsOnHand){
 			allocation.get(requestingThread)[0] += nUnits;
 			allocation.get(requestingThread)[1] -= nUnits;
 			this.nUnitsOnHand -= nUnits;
 			System.out.println("Thread "+ requestingThread.getName() +" has "+ allocation.get(requestingThread)[0] +" units allocated.");
 		} else {
-			while(!(isSafeState()) || nUnits > this.nUnitsOnHand){
+			while(!(isSafeState()) || nUnits >= this.nUnitsOnHand){
 				try {
 					System.out.println("Thread "+ requestingThread.getName() +" waits.");
 					this.wait();

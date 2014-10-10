@@ -10,9 +10,9 @@ import java.util.ArrayList;
 public class Driver {
 	
 	final private static int bankersResources = 4;
-	final private static int numClients = 2;
+	final private static int numClients = 3;
 	final private static int clientNUnits = 3;
-	final private static int clientNRequests = 3;
+	final private static int clientNRequests = 4;
 	final private static long minSleepMillis = 1000;
 	final private static long maxSleepMillis = 5000;
 	
