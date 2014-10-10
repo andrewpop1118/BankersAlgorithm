@@ -6,26 +6,52 @@
  * @author Andrew Popovich (ajp7560@rit.edu)
  */
 
-import java.util.LinkedHashMap;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 
 public class Banker {
-	private int nUnits;
-	private LinkedHashMap<Thread,int[]> allocation; //May need to change
+	private int nUnitsOnHand;
+	private int nUnitsTotal;
+	private HashMap<Thread,int[]> allocation; //May need to change- int[] = [currentAlloc, remainingAlloc]
+	
+	private class AllocCompare implements Comparator<int []> {
+
+		@Override
+		public int compare(int[] o1, int[] o2) {
+			if(o1.length < 2 || o2.length < 2) {
+				System.err.println("Error - Comparing Invalid Allocation Arrays");
+				System.exit(1);
+			}
+			
+			if(o1[1] == o2[1]) {
+				return 0;
+			} else if (o1[1] > o1[2]) {
+				return 1;
+			} else {
+				return -1;
+			}
+		}
+		
+		
+	}
 	
 	public Banker(int nUnits) {
-		this.nUnits = nUnits;
+		this.nUnitsOnHand = nUnits;
+		this.nUnitsTotal = nUnits;
 	}
 	
 	public void setClaim(int nUnits) {
 		
 		Thread claimingThread = Thread.currentThread();
 		
-		//Prevent race conditions for threads attempting to make requests
-		//at the same time
+		//Prevent race conditions for threads attempting to access
+		//the allocation map at the same time
 		synchronized(this) {
 			if(allocation.get(claimingThread) != null ||
 			   nUnits < 0 ||
-			   nUnits < this.nUnits) {
+			   nUnits > this.nUnitsTotal) {
 				System.exit(1); //Terminate abnormally in these cases
 			}
 			
@@ -38,18 +64,88 @@ public class Banker {
 	}
 	
 	public boolean request(int nUnits) {
-		return false;
+		Thread requestingThread = Thread.currentThread();
+		
+		if(allocation.get(requestingThread) == null ||
+           nUnits < 0 ||
+           nUnits > allocation.get(requestingThread)[1]) {
+			System.exit(1);
+		}
+		
+		System.out.println("Thread " + requestingThread.getName() + " requests "+nUnits+" units.");
+		
+		boolean safe = isSafeState();
+		
+		if(safe){
+			System.out.println("Thread "+ requestingThread.getName() +" has "+ nUnits +" units allocated.");
+			allocation.get(requestingThread)[0] += nUnits;
+			allocation.get(requestingThread)[1] -= nUnits;
+			this.nUnitsOnHand -= nUnits;
+		} else {
+			//Additional lock over isSafeState
+			synchronized(this){
+				while(!isSafeState()){
+					try {
+						System.out.println("Thread "+ requestingThread.getName() +"waits.");
+						requestingThread.wait();
+						System.out.println("Thread"+ requestingThread.getName() +"awakened.");
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+			//The Allocation results in a safe state here
+			System.out.println("Thread "+ requestingThread.getName() +" has "+ nUnits +" units allocated.");
+			allocation.get(requestingThread)[0] += nUnits;
+			allocation.get(requestingThread)[1] -= nUnits;
+			this.nUnitsOnHand -= nUnits;
+			
+		}
+		return true;
 	}
 	
 	public void release(int nUnits) {
+		Thread requestingThread = Thread.currentThread();
+		
+		if(allocation.get(requestingThread) == null ||
+           nUnits < 0 ||
+           nUnits > allocation.get(requestingThread)[1]) {
+			System.exit(1);
+		}
+		
+		allocation.get(requestingThread)[0] -= nUnits;
+		allocation.get(requestingThread)[1] += nUnits;
+		this.notifyAll();
 		
 	}
 	
 	public int allocated() {
-		return 0;
+		return allocation.get(Thread.currentThread())[0];
 	}
 	
 	public int remaining() {
-		return 0;
+		return allocation.get(Thread.currentThread())[1];
+	}
+	
+	private boolean isSafeState(){
+		//We're reading the allocation map here so we want to lock
+		//the banker so that no race conditions occur
+		synchronized(this){
+			int nUnitsOnHand = this.nUnitsOnHand;
+			
+			ArrayList<int[]> allocationPairs = new ArrayList<int[]>();
+			
+			allocationPairs = (ArrayList<int[]>) allocation.values();
+		
+			Collections.sort(allocationPairs, new AllocCompare());
+			
+			for(int i = 0; i < allocationPairs.size(); i++) {
+				if(allocationPairs.get(i)[1] > nUnitsOnHand) {
+					return false;
+				}
+				nUnitsOnHand += allocationPairs.get(i)[0];
+			}
+		}
+		return true;
 	}
 }
